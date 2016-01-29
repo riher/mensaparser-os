@@ -1,6 +1,7 @@
 import pycurl
 from io import BytesIO
 from bs4 import BeautifulSoup
+import datetime
 
 
 def translate_pictogram(string):
@@ -34,24 +35,46 @@ class TeilMahlzeit(object):
 
 class Mahlzeit(object):
 
-    def __init__(self, title, tags=[]):
-        self.title = title
-        self.tags = tags
+    def __init__(self, parts=[]):
+        self.parts = parts
 
     def __str__(self):
         return self.title
 
+    @property
+    def title(self):
+        title_parts = []
+        for p in self.parts:
+            title_parts.append(p.title)
+        return ' '.join(title_parts)
+
+    @property
+    def tag_set(self):
+        tags = set()
+        for p in self.parts:
+            tags.update(p.tags)
+        return tags
+
+    @property
+    def additive_set(self):
+        additives = set()
+        for p in self.parts:
+            additives.update(p.additives)
+        return additives
+
 
 class Speiseplan(object):
 
-    PROVIDER_URL = 'https://www.maxmanager.de/daten-extern/os-neu/html/inc/ajax-php_konnektor.inc.php'
+    URL = 'https://www.maxmanager.de/daten-extern/os-neu/html/inc/ajax-php_konnektor.inc.php'
 
     def __init__(self):
         c = pycurl.Curl()
         buffer = BytesIO()
+        date = datetime.date.today()
+        # date = datetime.timedelta(days=-1)+date
 
-        c.setopt(c.URL, Speiseplan.PROVIDER_URL)
-        c.setopt(c.POSTFIELDS, 'func=make_spl&locId=7&lang=de&date=2016-01-29')
+        c.setopt(c.URL, Speiseplan.URL)
+        c.setopt(c.POSTFIELDS, 'func=make_spl&locId=7&lang=de&date='+str(date))
         c.setopt(c.WRITEDATA, buffer)
         c.perform()
         c.close()
@@ -89,13 +112,16 @@ class Speiseplan(object):
 
                 parts.append(TeilMahlzeit(title=title, tags=tags, additives=additives))
 
-            self.meals.append(parts)
+            self.meals.append(Mahlzeit(parts))
 
 
 #### tests #####
 if __name__ == "__main__":
     s = Speiseplan()
     for m in s.meals:
+        if not 'vegan' in m.tag_set:
+            continue
         print('m')
-        for p in m:
-            print(p.title, p.tags, p.additives)
+        print(m.title, m.tag_set, m.additive_set)
+        # for p in m.parts:
+            # print(p.title, p.tag_set, p.additive_set)
