@@ -5,6 +5,7 @@ import datetime
 
 
 def translate_pictogram(string):
+    """Translates parsed icon names to verbose tag names."""
     tag_dict = {
         'icons/40.png': 'Geflügel',
         'icons/21.png': 'vegan',
@@ -23,6 +24,16 @@ def translate_pictogram(string):
 
 
 class TeilMahlzeit(object):
+    """Meal part objects which make up a meal (Mahlzeit)
+
+    These objects are strings with corresponding tags and additives.
+
+    Keyword arguments:
+    title -- a string describing the name of the meal part
+    tags -- a list of tags describing the contents of the meal part
+            (default: empty list)
+    additives -- a list of additives in the meal part (default: empty list)
+    """
 
     def __init__(self, title, tags=[], additives=[]):
         self.title = title
@@ -34,6 +45,14 @@ class TeilMahlzeit(object):
 
 
 class Mahlzeit(object):
+    """Meal objects which make up a meal plan (Speiseplan)
+
+    These objects are more or less a list of meal parts (TeilMahlzeit) and
+    should contain at least one of them.
+
+    Keyword arguments:
+    parts -- takes a list of TeilMahlzeit objects (default: empty list)
+    """
 
     def __init__(self, parts=[]):
         self.parts = parts
@@ -43,6 +62,7 @@ class Mahlzeit(object):
 
     @property
     def title(self):
+        """Complete name of the meal."""
         title_parts = []
         for p in self.parts:
             title_parts.append(p.title)
@@ -50,6 +70,7 @@ class Mahlzeit(object):
 
     @property
     def tag_set(self):
+        """List of all tags of the meal."""
         tags = set()
         for p in self.parts:
             tags.update(p.tags)
@@ -57,6 +78,7 @@ class Mahlzeit(object):
 
     @property
     def additive_set(self):
+        """List of all additives of the meal."""
         additives = set()
         for p in self.parts:
             additives.update(p.additives)
@@ -64,14 +86,26 @@ class Mahlzeit(object):
 
 
 class Speiseplan(object):
+    """Meal plan object.
 
-    URL = 'https://www.maxmanager.de/daten-extern/os-neu/html/inc/ajax-php_konnektor.inc.php'
+    This object is a list of meals (Mahlzeit) which gets created by parsing
+    the official site of the Osnabrück Mensa.
+
+    Keyword arguments:
+    date -- a datetime.date object describing the date you want the meal plan
+            for (default: current date)
+    """
 
     def __init__(self, date=datetime.date.today()):
+        """Gets the official meal plan site of Mensa Osnabrück and translates
+        the html to python objects which can be handled more nicely.
+        """
+
         c = pycurl.Curl()
         buffer = BytesIO()
 
-        c.setopt(c.URL, Speiseplan.URL)
+        URL = 'https://www.maxmanager.de/daten-extern/os-neu/html/inc/ajax-php_konnektor.inc.php'
+        c.setopt(c.URL, URL)
         c.setopt(c.POSTFIELDS, 'func=make_spl&locId=7&lang=de&date='+str(date))
         c.setopt(c.WRITEDATA, buffer)
         c.perform()
@@ -111,15 +145,3 @@ class Speiseplan(object):
                 parts.append(TeilMahlzeit(title=title, tags=tags, additives=additives))
 
             self.meals.append(Mahlzeit(parts))
-
-
-#### tests #####
-if __name__ == "__main__":
-    s = Speiseplan()
-    for m in s.meals:
-        if not 'vegan' in m.tag_set:
-            continue
-        print('m')
-        print(m.title, m.tag_set, m.additive_set)
-        # for p in m.parts:
-            # print(p.title, p.tag_set, p.additive_set)
