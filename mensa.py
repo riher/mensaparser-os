@@ -46,7 +46,7 @@ class Mahlzeit(object):
         title_parts = []
         for p in self.parts:
             title_parts.append(p.title)
-        return ' '.join(title_parts)
+        return ' + '.join(title_parts)
 
     @property
     def tag_set(self):
@@ -67,11 +67,9 @@ class Speiseplan(object):
 
     URL = 'https://www.maxmanager.de/daten-extern/os-neu/html/inc/ajax-php_konnektor.inc.php'
 
-    def __init__(self):
+    def __init__(self, date=datetime.date.today()):
         c = pycurl.Curl()
         buffer = BytesIO()
-        date = datetime.date.today()
-        # date = datetime.timedelta(days=-1)+date
 
         c.setopt(c.URL, Speiseplan.URL)
         c.setopt(c.POSTFIELDS, 'func=make_spl&locId=7&lang=de&date='+str(date))
@@ -80,10 +78,10 @@ class Speiseplan(object):
         c.close()
 
         body = buffer.getvalue()
-        self.soup = BeautifulSoup(body.decode('utf-8'), 'html.parser')
+        soup = BeautifulSoup(body.decode('utf-8'), 'html.parser')
         self.meals = []
 
-        for cell in self.soup.find_all(class_='cell2'):
+        for cell in soup.find_all(class_='cell2'):
             divs = cell.find_all('div')
             parts = []
             contents = []
